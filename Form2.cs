@@ -14,11 +14,11 @@ namespace Strooptest
         private Panel gamePanel;
         private Label lblWort;
         private Label lblPunkte;
+        private Label lblZeit;
         private Label lblLetzteAntwort;
 
-        // Wort- und Farbarrays
-        private string[] woerter = { "Rot", "Blau", "Gelb", "Grün", "Orange", "Lila", "Pink", "Braun", "Cyan" };
-        private Color[] farben = {
+        private List<string> woerter = new List<string> { "Rot", "Blau", "Gelb", "Grün", "Orange", "Lila", "Pink", "Braun", "Cyan" };
+        private List<Color> farben = new List<Color> {
             Color.Red,      // Rot
             Color.Blue,     // Blau
             Color.Yellow,   // Gelb
@@ -34,21 +34,74 @@ namespace Strooptest
         private bool warningShown = false;
         private int punkte = 0;
 
+        // Timer Variablen
+        private System.Windows.Forms.Timer spielTimer;
+        private TimeSpan vergangeneZeit;
+        private bool timerLaeuft = false;
+
         public Form2()
         {
             InitializeComponent();
+            InitializeTimer(); // WICHTIG: Erst Timer initialisieren!
             InitializeGameComponents();
         }
 
-        private void Form2_Load(object sender, EventArgs e)
+        private void InitializeTimer()
         {
-            // Hier muss nichts rein
+            // Timer initialisieren
+            spielTimer = new System.Windows.Forms.Timer();
+            spielTimer.Interval = 1000; // 1 Sekunde
+            spielTimer.Tick += SpielTimer_Tick;
+
+            vergangeneZeit = TimeSpan.Zero;
         }
+
+        private void SpielTimer_Tick(object sender, EventArgs e)
+        {
+            // Eine Sekunde hinzufügen
+            vergangeneZeit = vergangeneZeit.Add(TimeSpan.FromSeconds(1));
+
+            // Zeit im Format MM:SS anzeigen
+            if (lblZeit != null)
+            {
+                lblZeit.Text = $"Zeit: {vergangeneZeit:mm\\:ss}";
+            }
+        }
+
+        private void StarteTimer()
+        {
+            if (spielTimer == null)
+            {
+                InitializeTimer();
+            }
+
+            if (!timerLaeuft)
+            {
+                vergangeneZeit = TimeSpan.Zero;
+                if (lblZeit != null)
+                {
+                    lblZeit.Text = "Zeit: 00:00";
+                }
+                spielTimer.Start();
+                timerLaeuft = true;
+            }
+        }
+
+        private void StoppeTimer()
+        {
+            if (spielTimer != null && timerLaeuft)
+            {
+                spielTimer.Stop();
+                timerLaeuft = false;
+            }
+        }
+
+        private void Form2_Load(object sender, EventArgs e) { }
 
         private void InitializeGameComponents()
         {
             this.Text = "Stroop Test - Spiel";
-            this.Size = new Size(650, 800);
+            this.Size = new Size(650, 850);
             this.StartPosition = FormStartPosition.CenterScreen;
 
             // Zurück-Button
@@ -59,7 +112,11 @@ namespace Strooptest
                 Size = new Size(180, 30),
                 BackColor = Color.LightBlue
             };
-            btnZurueck.Click += (s, e) => this.Close();
+            btnZurueck.Click += (s, e) =>
+            {
+                StoppeTimer();
+                this.Close();
+            };
             this.Controls.Add(btnZurueck);
 
             // Punkte-Anzeige
@@ -74,12 +131,24 @@ namespace Strooptest
             };
             this.Controls.Add(lblPunkte);
 
+            // Zeit-Anzeige
+            lblZeit = new Label
+            {
+                Text = "Zeit: 00:00",
+                Location = new Point(20, 55),
+                Size = new Size(150, 25),
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = Color.Blue
+            };
+            this.Controls.Add(lblZeit);
+
             // Letzte Antwort-Anzeige
             lblLetzteAntwort = new Label
             {
                 Text = "",
-                Location = new Point(20, 55),
-                Size = new Size(600, 25),
+                Location = new Point(180, 55),
+                Size = new Size(400, 25),
                 Font = new Font("Arial", 10, FontStyle.Italic),
                 TextAlign = ContentAlignment.MiddleCenter,
                 ForeColor = Color.Gray
@@ -90,7 +159,7 @@ namespace Strooptest
             lblWort = new Label
             {
                 Text = "Rot",
-                Location = new Point(20, 85),
+                Location = new Point(20, 90),
                 Size = new Size(550, 60),
                 Font = new Font("Arial", 28, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -102,7 +171,7 @@ namespace Strooptest
             // Game Panel
             gamePanel = new Panel
             {
-                Location = new Point(20, 155),
+                Location = new Point(20, 160),
                 Size = new Size(550, 520),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = Color.White
@@ -118,7 +187,7 @@ namespace Strooptest
             Label lblAnzahl = new Label
             {
                 Text = "Anzahl PictureBoxes:",
-                Location = new Point(220, 695),
+                Location = new Point(220, 700),
                 Size = new Size(130, 25)
             };
             this.Controls.Add(lblAnzahl);
@@ -126,7 +195,7 @@ namespace Strooptest
             // NumericUpDown für Anzahl
             nudAnzahlPictureBoxes = new NumericUpDown
             {
-                Location = new Point(350, 695),
+                Location = new Point(350, 700),
                 Size = new Size(80, 25),
                 Minimum = 1,
                 Maximum = 100,
@@ -139,16 +208,44 @@ namespace Strooptest
             btnGridErstellen = new Button
             {
                 Text = "Grid erstellen",
-                Location = new Point(440, 693),
+                Location = new Point(440, 698),
                 Size = new Size(120, 30),
                 BackColor = Color.LightGreen
             };
             btnGridErstellen.Click += BtnGridErstellen_Click;
             this.Controls.Add(btnGridErstellen);
 
+            // Reset Button
+            Button btnReset = new Button
+            {
+                Text = "Neustart",
+                Location = new Point(20, 698),
+                Size = new Size(100, 30),
+                BackColor = Color.LightYellow
+            };
+            btnReset.Click += BtnReset_Click;
+            this.Controls.Add(btnReset);
+
             // Neues Spiel starten
             gameBoard.AnzahlPictureBoxes = 9;
             StarteNeueRunde();
+            StarteTimer(); // Timer nach der UI-Initialisierung starten
+        }
+
+        private void BtnReset_Click(object sender, EventArgs e)
+        {
+            // Spiel zurücksetzen
+            punkte = 0;
+            lblPunkte.Text = "Punkte: 0";
+
+            // Timer zurücksetzen
+            StoppeTimer();
+            vergangeneZeit = TimeSpan.Zero;
+            lblZeit.Text = "Zeit: 00:00";
+
+            // Neue Runde starten
+            StarteNeueRunde();
+            StarteTimer();
         }
 
         private void NudAnzahlPictureBoxes_ValueChanged(object sender, EventArgs e)
@@ -176,14 +273,21 @@ namespace Strooptest
             gameBoard.AnzahlPictureBoxes = (int)nudAnzahlPictureBoxes.Value;
             punkte = 0;
             lblPunkte.Text = "Punkte: 0";
+
+            // Timer zurücksetzen
+            StoppeTimer();
+            vergangeneZeit = TimeSpan.Zero;
+            lblZeit.Text = "Zeit: 00:00";
+
             StarteNeueRunde();
+            StarteTimer();
         }
 
         private void StarteNeueRunde()
         {
             // Neues Wort oben generieren
-            int wortIndex = random.Next(woerter.Length);
-            int farbenIndex = random.Next(farben.Length);
+            int wortIndex = random.Next(woerter.Count);
+            int farbenIndex = random.Next(farben.Count);
 
             lblWort.Text = woerter[wortIndex];
             lblWort.ForeColor = farben[farbenIndex];
@@ -195,7 +299,7 @@ namespace Strooptest
                                 ? Color.DarkGray
                                 : Color.LightYellow;
 
-            // Dem GameBoard mitteilen, welches Wort gesucht wird (basierend auf der Farbe des oberen Wortes)
+            // Dem GameBoard mitteilen, welches Wort gesucht wird
             gameBoard.SetzeGesuchtesWort(farben[farbenIndex]);
 
             // Grid mit neuen Wörtern füllen
@@ -204,33 +308,35 @@ namespace Strooptest
 
         private void GameBoard_CorrectAnswerSelected(object sender, AnswerEventArgs e)
         {
-            // Punkt erhöhen
             punkte++;
             lblPunkte.Text = $"Punkte: {punkte}";
 
-            // Letzte Antwort anzeigen
             lblLetzteAntwort.Text = $"✓ Richtig! Das Wort '{e.GeklicktesWort}' war gesucht (+1 Punkt)";
             lblLetzteAntwort.ForeColor = Color.Green;
 
-            // Neue Runde starten
             StarteNeueRunde();
         }
 
         private void GameBoard_WrongAnswerSelected(object sender, AnswerEventArgs e)
         {
-            // Letzte Antwort anzeigen
             lblLetzteAntwort.Text = $"✗ Falsch! Gesucht war '{e.GesuchtesWort}', aber du hast '{e.GeklicktesWort}' geklickt";
             lblLetzteAntwort.ForeColor = Color.Red;
 
-            // Keine neue Runde, aber kurze Pause zur Visualisierung
+            // Kurze Pause zur Visualisierung, aber Zeit läuft weiter
             System.Threading.Tasks.Task.Delay(500).ContinueWith(_ =>
             {
                 this.Invoke((MethodInvoker)delegate
                 {
-                    // Neue Runde starten
                     StarteNeueRunde();
                 });
             });
+        }
+
+        // Form schließen - Timer stoppen
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            StoppeTimer();
+            base.OnFormClosing(e);
         }
     }
 }
