@@ -13,24 +13,21 @@ namespace Strooptest
         private List<PictureBox> pictureBoxes = new List<PictureBox>();
         private Random rand = new Random();
 
-        // Listen statt Arrays
         private List<string> woerter = new List<string> { "Rot", "Blau", "Gelb", "Grün", "Orange", "Lila", "Pink", "Braun", "Cyan" };
         private List<Color> farben = new List<Color> {
-            Color.Red,      // Rot
-            Color.Blue,     // Blau
-            Color.Yellow,   // Gelb
-            Color.Green,    // Grün
-            Color.Orange,   // Orange
-            Color.Purple,   // Lila
-            Color.HotPink,  // Pink
-            Color.Brown,    // Braun
-            Color.Cyan      // Cyan
+            Color.Red,          // Rot
+            Color.Blue,         // Blau
+            Color.Yellow,       // Gelb
+            Color.LimeGreen,    // Grün
+            Color.Orange,       // Orange
+            Color.Purple,       // Lila
+            Color.HotPink,      // Pink
+            Color.SaddleBrown,  // Braun
+            Color.Cyan          // Cyan
         };
 
-        // Speichert die aktuell gesuchte Wortbedeutung
         private string gesuchtesWort;
 
-        // Events für richtige/falsche Antworten
         public event EventHandler<AnswerEventArgs> CorrectAnswerSelected;
         public event EventHandler<AnswerEventArgs> WrongAnswerSelected;
 
@@ -45,13 +42,7 @@ namespace Strooptest
             set
             {
                 if (value > 40)
-                {
-                    throw new ArgumentOutOfRangeException(
-                        nameof(value),
-                        "Bro du brauchst nicht so viele Felder chill."
-                    );
-                }
-
+                    throw new ArgumentOutOfRangeException(nameof(value), "Bro du brauchst nicht so viele Felder chill.");
                 if (value >= 1)
                 {
                     anzahlPictureBoxes = value;
@@ -82,8 +73,7 @@ namespace Strooptest
             {
                 for (int spalte = 0; spalte < spalten; spalte++)
                 {
-                    if (counter >= anzahlPictureBoxes)
-                        break;
+                    if (counter >= anzahlPictureBoxes) break;
 
                     PictureBox pb = ErstellePictureBox(zeile, spalte, pictureBoxSize, startX, startY, counter);
                     gamePanel.Controls.Add(pb);
@@ -130,7 +120,7 @@ namespace Strooptest
                 gesuchtesWort = "Blau";
             else if (farbeDesOberenWortes == Color.Yellow)
                 gesuchtesWort = "Gelb";
-            else if (farbeDesOberenWortes == Color.Green)
+            else if (farbeDesOberenWortes == Color.LimeGreen)
                 gesuchtesWort = "Grün";
             else if (farbeDesOberenWortes == Color.Orange)
                 gesuchtesWort = "Orange";
@@ -138,7 +128,7 @@ namespace Strooptest
                 gesuchtesWort = "Lila";
             else if (farbeDesOberenWortes == Color.HotPink)
                 gesuchtesWort = "Pink";
-            else if (farbeDesOberenWortes == Color.Brown)
+            else if (farbeDesOberenWortes == Color.SaddleBrown)
                 gesuchtesWort = "Braun";
             else if (farbeDesOberenWortes == Color.Cyan)
                 gesuchtesWort = "Cyan";
@@ -146,152 +136,132 @@ namespace Strooptest
 
         public void GeneriereAlleLabelsNeu()
         {
+            if (anzahlPictureBoxes <= woerter.Count)
+            {
+                GeneriereEindeutig();
+            }
+            else
+            {
+                GeneriereMitNachbarschaftsregel();
+            }
+        }
+
+        private void GeneriereEindeutig()
+        {
             int spalten = (int)Math.Ceiling(Math.Sqrt(anzahlPictureBoxes));
 
-            // Stelle sicher dass wir genau so viele Elemente haben wie PictureBoxes
-            if (pictureBoxes.Count > woerter.Count)
+            List<string> gemischteWoerter = new List<string>();
+            List<Color> gemischteFarben = new List<Color>();
+
+            bool gueltig = false;
+
+            while (!gueltig)
             {
-                // Falls mehr PictureBoxes als Wörter, fülle mit Wiederholungen auf
-                GeneriereMitWiederholungen(spalten);
-                return;
+                gemischteWoerter = woerter.OrderBy(x => rand.Next()).Take(anzahlPictureBoxes).ToList();
+                gemischteFarben = farben.OrderBy(x => rand.Next()).Take(anzahlPictureBoxes).ToList();
+
+                gueltig = true;
+
+                for (int i = 0; i < anzahlPictureBoxes; i++)
+                {
+                    if (UeberpruefeObWortFarbeEntspricht(gemischteWoerter[i], gemischteFarben[i]))
+                    {
+                        gueltig = false;
+                        break;
+                    }
+                }
+
+                if (!gueltig) continue;
+
+                for (int i = 0; i < anzahlPictureBoxes; i++)
+                {
+                    int zeile = i / spalten;
+                    int spalte = i % spalten;
+
+                    var nachbarn = ErmittleNachbarn(i, zeile, spalte);
+
+                    foreach (int nachbar in nachbarn)
+                    {
+                        if (gemischteWoerter[i] == gemischteWoerter[nachbar] ||
+                            gemischteFarben[i] == gemischteFarben[nachbar])
+                        {
+                            gueltig = false;
+                            break;
+                        }
+                    }
+
+                    if (!gueltig) break;
+                }
             }
 
-            // Normale Generierung ohne Wiederholungen
-            GeneriereOhneWiederholungen(spalten);
+            for (int i = 0; i < anzahlPictureBoxes; i++)
+            {
+                PictureBox pb = pictureBoxes[i];
+
+                if (pb.Controls.Count > 0 && pb.Controls[0] is Label lbl)
+                {
+                    lbl.Text = gemischteWoerter[i];
+                    lbl.ForeColor = gemischteFarben[i];
+                }
+            }
         }
 
-        private void GeneriereOhneWiederholungen(int spalten)
+        private void GeneriereMitNachbarschaftsregel()
         {
-            // Erstelle gemischte Listen
-            List<string> gemischteWoerter = woerter.OrderBy(x => rand.Next()).ToList();
-            List<Color> gemischteFarben = farben.OrderBy(x => rand.Next()).ToList();
+            int spalten = (int)Math.Ceiling(Math.Sqrt(anzahlPictureBoxes));
 
-            // Dictionary für Zuordnungen
-            Dictionary<int, (string wort, Color farbe)> zuordnungen = new Dictionary<int, (string, Color)>();
-
-            // Versuche für jede Position eine passende Kombination zu finden
-            for (int i = 0; i < pictureBoxes.Count; i++)
-            {
-                int zeile = i / spalten;
-                int spalte = i % spalten;
-
-                // Bestehende Nachbarn ermitteln
-                var nachbarn = ErmittleNachbarn(i, zeile, spalte);
-                var verboteneWoerter = new HashSet<string>();
-                var verboteneFarben = new HashSet<Color>();
-
-                foreach (int nachbarIndex in nachbarn)
-                {
-                    if (zuordnungen.ContainsKey(nachbarIndex))
-                    {
-                        var nachbar = zuordnungen[nachbarIndex];
-                        verboteneWoerter.Add(nachbar.wort);
-                        verboteneFarben.Add(nachbar.farbe);
-                    }
-                }
-
-                // Verfügbare Optionen filtern
-                var verfuegbareWoerter = gemischteWoerter
-                    .Where(w => !verboteneWoerter.Contains(w))
-                    .ToList();
-
-                var verfuegbareFarben = gemischteFarben
-                    .Where(f => !verboteneFarben.Contains(f))
-                    .ToList();
-
-                string gewaehltesWort = "";
-                Color gewaehlteFarbe = Color.Empty;
-                bool gefunden = false;
-
-                // Versuche eine Kombination mit Stroop-Effekt zu finden
-                foreach (var wort in verfuegbareWoerter)
-                {
-                    foreach (var farbe in verfuegbareFarben)
-                    {
-                        if (!UeberpruefeObWortFarbeEntspricht(wort, farbe))
-                        {
-                            gewaehltesWort = wort;
-                            gewaehlteFarbe = farbe;
-                            gefunden = true;
-                            break;
-                        }
-                    }
-                    if (gefunden) break;
-                }
-
-                // Wenn nichts gefunden, nimm die erste verfügbare Kombination
-                if (!gefunden && verfuegbareWoerter.Count > 0 && verfuegbareFarben.Count > 0)
-                {
-                    gewaehltesWort = verfuegbareWoerter[0];
-                    gewaehlteFarbe = verfuegbareFarben[0];
-                }
-
-                // Absoluter Notfallplan
-                if (!gefunden)
-                {
-                    // Nimm irgendein Wort und eine andere Farbe
-                    gewaehltesWort = gemischteWoerter[i % gemischteWoerter.Count];
-
-                    // Finde eine Farbe die nicht die eigene ist
-                    foreach (var farbe in gemischteFarben)
-                    {
-                        if (!UeberpruefeObWortFarbeEntspricht(gewaehltesWort, farbe))
-                        {
-                            gewaehlteFarbe = farbe;
-                            gefunden = true;
-                            break;
-                        }
-                    }
-
-                    // Falls immer noch nichts, nimm die erste Farbe
-                    if (!gefunden && gemischteFarben.Count > 0)
-                    {
-                        gewaehlteFarbe = gemischteFarben[0];
-                    }
-                }
-
-                // Speichern und aus Listen entfernen
-                zuordnungen[i] = (gewaehltesWort, gewaehlteFarbe);
-                gemischteWoerter.Remove(gewaehltesWort);
-                gemischteFarben.Remove(gewaehlteFarbe);
-            }
-
-            // Labels zuweisen
             for (int i = 0; i < pictureBoxes.Count; i++)
             {
                 PictureBox pb = pictureBoxes[i];
                 if (pb.Controls.Count > 0 && pb.Controls[0] is Label lbl)
                 {
-                    lbl.Text = zuordnungen[i].wort;
-                    lbl.ForeColor = zuordnungen[i].farbe;
-                }
-            }
-        }
+                    int zeile = i / spalten;
+                    int spalte = i % spalten;
+                    var nachbarn = ErmittleNachbarn(i, zeile, spalte);
 
-        private void GeneriereMitWiederholungen(int spalten)
-        {
-            // Bei mehr PictureBoxes als Wörtern, erlaube Wiederholungen
-            for (int i = 0; i < pictureBoxes.Count; i++)
-            {
-                int zeile = i / spalten;
-                int spalte = i % spalten;
+                    HashSet<string> verboteneWoerter = new HashSet<string>();
+                    HashSet<Color> verboteneFarben = new HashSet<Color>();
+                    foreach (int nachbarIndex in nachbarn)
+                    {
+                        PictureBox nachbarPb = pictureBoxes[nachbarIndex];
+                        if (nachbarPb.Controls.Count > 0 && nachbarPb.Controls[0] is Label nachbarLbl)
+                        {
+                            verboteneWoerter.Add(nachbarLbl.Text);
+                            verboteneFarben.Add(nachbarLbl.ForeColor);
+                        }
+                    }
 
-                PictureBox pb = pictureBoxes[i];
-                if (pb.Controls.Count > 0 && pb.Controls[0] is Label lbl)
-                {
-                    string wort = woerter[rand.Next(woerter.Count)];
-                    Color farbe = farben[rand.Next(farben.Count)];
-
-                    // Stelle sicher dass Wort und Farbe nicht übereinstimmen
+                    string neuesWort = "";
+                    Color neueFarbe = Color.Empty;
+                    bool gefunden = false;
+                    int maxVersuche = 1000;
                     int versuche = 0;
-                    while (UeberpruefeObWortFarbeEntspricht(wort, farbe) && versuche < 50)
+
+                    while (!gefunden && versuche < maxVersuche)
                     {
-                        farbe = farben[rand.Next(farben.Count)];
+                        neuesWort = woerter[rand.Next(woerter.Count)];
+                        neueFarbe = farben[rand.Next(farben.Count)];
+
+                        if (!verboteneWoerter.Contains(neuesWort) &&
+                            !verboteneFarben.Contains(neueFarbe) &&
+                            !UeberpruefeObWortFarbeEntspricht(neuesWort, neueFarbe))
+                        {
+                            gefunden = true;
+                        }
                         versuche++;
                     }
 
-                    lbl.Text = wort;
-                    lbl.ForeColor = farbe;
+                    if (!gefunden)
+                    {
+                        do
+                        {
+                            neuesWort = woerter[rand.Next(woerter.Count)];
+                            neueFarbe = farben[rand.Next(farben.Count)];
+                        } while (UeberpruefeObWortFarbeEntspricht(neuesWort, neueFarbe));
+                    }
+
+                    lbl.Text = neuesWort;
+                    lbl.ForeColor = neueFarbe;
                 }
             }
         }
@@ -304,31 +274,23 @@ namespace Strooptest
             if (zeile > 0)
             {
                 int obenIndex = index - spalten;
-                if (obenIndex >= 0 && obenIndex < anzahlPictureBoxes)
-                    nachbarn.Add(obenIndex);
+                if (obenIndex >= 0 && obenIndex < anzahlPictureBoxes) nachbarn.Add(obenIndex);
             }
-
             if (zeile < spalten - 1)
             {
                 int untenIndex = index + spalten;
-                if (untenIndex >= 0 && untenIndex < anzahlPictureBoxes)
-                    nachbarn.Add(untenIndex);
+                if (untenIndex >= 0 && untenIndex < anzahlPictureBoxes) nachbarn.Add(untenIndex);
             }
-
             if (spalte > 0)
             {
                 int linksIndex = index - 1;
-                if (linksIndex >= 0 && linksIndex < anzahlPictureBoxes)
-                    nachbarn.Add(linksIndex);
+                if (linksIndex >= 0 && linksIndex < anzahlPictureBoxes) nachbarn.Add(linksIndex);
             }
-
             if (spalte < spalten - 1)
             {
                 int rechtsIndex = index + 1;
-                if (rechtsIndex >= 0 && rechtsIndex < anzahlPictureBoxes)
-                    nachbarn.Add(rechtsIndex);
+                if (rechtsIndex >= 0 && rechtsIndex < anzahlPictureBoxes) nachbarn.Add(rechtsIndex);
             }
-
             return nachbarn;
         }
 
@@ -337,13 +299,12 @@ namespace Strooptest
             if (wort == "Rot" && farbe == Color.Red) return true;
             if (wort == "Blau" && farbe == Color.Blue) return true;
             if (wort == "Gelb" && farbe == Color.Yellow) return true;
-            if (wort == "Grün" && farbe == Color.Green) return true;
+            if (wort == "Grün" && farbe == Color.LimeGreen) return true;
             if (wort == "Orange" && farbe == Color.Orange) return true;
             if (wort == "Lila" && farbe == Color.Purple) return true;
             if (wort == "Pink" && farbe == Color.HotPink) return true;
-            if (wort == "Braun" && farbe == Color.Brown) return true;
+            if (wort == "Braun" && farbe == Color.SaddleBrown) return true;
             if (wort == "Cyan" && farbe == Color.Cyan) return true;
-
             return false;
         }
 
@@ -354,6 +315,8 @@ namespace Strooptest
             {
                 if (clickedPb.Controls.Count > 0 && clickedPb.Controls[0] is Label lbl)
                 {
+                    if (!lbl.Visible) return;
+
                     bool istRichtig = (lbl.Text == gesuchtesWort);
 
                     if (istRichtig)
@@ -392,16 +355,45 @@ namespace Strooptest
             pictureBoxes.Clear();
         }
 
-        public int GetAnzahlPictureBoxes()
-        {
-            return pictureBoxes.Count;
-        }
+        public int GetAnzahlPictureBoxes() => pictureBoxes.Count;
 
         public void SetzePictureBoxFarbe(int index, Color farbe)
         {
             if (index >= 0 && index < pictureBoxes.Count)
-            {
                 pictureBoxes[index].BackColor = farbe;
+        }
+
+        public void SetzeSichtbareLabelsNachSchwierigkeit(string schwierigkeit)
+        {
+            if (pictureBoxes.Count != 9)
+            {
+                foreach (var pb in pictureBoxes)
+                    if (pb.Controls.Count > 0 && pb.Controls[0] is Label lbl)
+                        lbl.Visible = true;
+                return;
+            }
+
+            for (int i = 0; i < pictureBoxes.Count; i++)
+            {
+                PictureBox pb = pictureBoxes[i];
+                if (pb.Controls.Count > 0 && pb.Controls[0] is Label lbl)
+                {
+                    bool sichtbar = false;
+                    switch (schwierigkeit)
+                    {
+                        case "Leicht":
+                            sichtbar = (i == 3 || i == 4 || i == 5);
+                            break;
+                        case "Mittel":
+                            sichtbar = (i <= 2 || i >= 6);
+                            break;
+                        case "Schwer":
+                        default:
+                            sichtbar = true;
+                            break;
+                    }
+                    lbl.Visible = sichtbar;
+                }
             }
         }
     }

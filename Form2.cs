@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace Strooptest
@@ -19,69 +20,56 @@ namespace Strooptest
 
         private List<string> woerter = new List<string> { "Rot", "Blau", "Gelb", "Grün", "Orange", "Lila", "Pink", "Braun", "Cyan" };
         private List<Color> farben = new List<Color> {
-            Color.Red,      // Rot
-            Color.Blue,     // Blau
-            Color.Yellow,   // Gelb
-            Color.Green,    // Grün
-            Color.Orange,   // Orange
-            Color.Purple,   // Lila
-            Color.HotPink,  // Pink
-            Color.Brown,    // Braun
-            Color.Cyan      // Cyan
+            Color.Red,          // Rot
+            Color.Blue,         // Blau
+            Color.Yellow,       // Gelb
+            Color.LimeGreen,    // Grün
+            Color.Orange,       // Orange
+            Color.Purple,       // Lila
+            Color.HotPink,      // Pink
+            Color.SaddleBrown,  // Braun
+            Color.Cyan          // Cyan
         };
 
         private Random random = new Random();
         private bool warningShown = false;
         private int punkte = 0;
 
-        // Timer Variablen
         private System.Windows.Forms.Timer spielTimer;
         private TimeSpan vergangeneZeit;
         private bool timerLaeuft = false;
 
+        private string aktuelleSchwierigkeit = "Schwer";
+
         public Form2()
         {
             InitializeComponent();
-            InitializeTimer(); // WICHTIG: Erst Timer initialisieren!
+            InitializeTimer();
             InitializeGameComponents();
         }
 
         private void InitializeTimer()
         {
-            // Timer initialisieren
             spielTimer = new System.Windows.Forms.Timer();
-            spielTimer.Interval = 1000; // 1 Sekunde
+            spielTimer.Interval = 1000;
             spielTimer.Tick += SpielTimer_Tick;
-
             vergangeneZeit = TimeSpan.Zero;
         }
 
         private void SpielTimer_Tick(object sender, EventArgs e)
         {
-            // Eine Sekunde hinzufügen
             vergangeneZeit = vergangeneZeit.Add(TimeSpan.FromSeconds(1));
-
-            // Zeit im Format MM:SS anzeigen
             if (lblZeit != null)
-            {
                 lblZeit.Text = $"Zeit: {vergangeneZeit:mm\\:ss}";
-            }
         }
 
         private void StarteTimer()
         {
-            if (spielTimer == null)
-            {
-                InitializeTimer();
-            }
-
+            if (spielTimer == null) InitializeTimer();
             if (!timerLaeuft)
             {
                 vergangeneZeit = TimeSpan.Zero;
-                if (lblZeit != null)
-                {
-                    lblZeit.Text = "Zeit: 00:00";
-                }
+                if (lblZeit != null) lblZeit.Text = "Zeit: 00:00";
                 spielTimer.Start();
                 timerLaeuft = true;
             }
@@ -163,7 +151,7 @@ namespace Strooptest
                 Size = new Size(550, 60),
                 Font = new Font("Arial", 28, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.LightYellow,
+                BackColor = Color.Gray,
                 BorderStyle = BorderStyle.FixedSingle
             };
             this.Controls.Add(lblWort);
@@ -226,24 +214,99 @@ namespace Strooptest
             btnReset.Click += BtnReset_Click;
             this.Controls.Add(btnReset);
 
+            // ---- Schwierigkeitsauswahl ----
+            GroupBox grpSchwierigkeit = new GroupBox
+            {
+                Text = "Schwierigkeit",
+                Location = new Point(20, 740),
+                Size = new Size(550, 60),
+                BackColor = Color.Transparent
+            };
+
+            RadioButton rbLeicht = new RadioButton
+            {
+                Text = "Leicht (3 Labels)",
+                Location = new Point(20, 25),
+                Size = new Size(120, 25),
+                Checked = false
+            };
+            rbLeicht.CheckedChanged += (s, e) =>
+            {
+                if (rbLeicht.Checked)
+                {
+                    aktuelleSchwierigkeit = "Leicht";
+                    nudAnzahlPictureBoxes.Value = 9;
+                    nudAnzahlPictureBoxes.Enabled = false;
+                    if (gameBoard.GetAnzahlPictureBoxes() > 0)
+                        BtnGridErstellen_Click(null, null);
+                }
+            };
+
+            RadioButton rbMittel = new RadioButton
+            {
+                Text = "Mittel (6 Labels)",
+                Location = new Point(150, 25),
+                Size = new Size(120, 25),
+                Checked = false
+            };
+            rbMittel.CheckedChanged += (s, e) =>
+            {
+                if (rbMittel.Checked)
+                {
+                    aktuelleSchwierigkeit = "Mittel";
+                    nudAnzahlPictureBoxes.Value = 9;
+                    nudAnzahlPictureBoxes.Enabled = false;
+                    if (gameBoard.GetAnzahlPictureBoxes() > 0)
+                        BtnGridErstellen_Click(null, null);
+                }
+            };
+
+            RadioButton rbSchwer = new RadioButton
+            {
+                Text = "Schwer (9 Labels)",
+                Location = new Point(280, 25),
+                Size = new Size(120, 25),
+                Checked = true
+            };
+            rbSchwer.CheckedChanged += (s, e) =>
+            {
+                if (rbSchwer.Checked)
+                {
+                    aktuelleSchwierigkeit = "Schwer";
+                    nudAnzahlPictureBoxes.Value = 9;
+                    nudAnzahlPictureBoxes.Enabled = false;
+                    if (gameBoard.GetAnzahlPictureBoxes() > 0)
+                        BtnGridErstellen_Click(null, null);
+                }
+            };
+
+            grpSchwierigkeit.Controls.AddRange(new Control[] { rbLeicht, rbMittel, rbSchwer });
+            this.Controls.Add(grpSchwierigkeit);
+
+            // NumericUpDown standardmäßig deaktivieren (wegen Schwierigkeit "Schwer")
+            nudAnzahlPictureBoxes.Enabled = false;
+
+            // --- Automatische Anpassung an Bildschirm ---
+            this.AutoScroll = true;
+            Rectangle screen = Screen.PrimaryScreen.WorkingArea;
+            int desiredHeight = (int)(screen.Height * 0.9);
+            this.Height = Math.Min(850, desiredHeight);
+            this.Width = 650;
+            this.StartPosition = FormStartPosition.CenterScreen;
+
             // Neues Spiel starten
             gameBoard.AnzahlPictureBoxes = 9;
             StarteNeueRunde();
-            StarteTimer(); // Timer nach der UI-Initialisierung starten
+            StarteTimer();
         }
 
         private void BtnReset_Click(object sender, EventArgs e)
         {
-            // Spiel zurücksetzen
             punkte = 0;
             lblPunkte.Text = "Punkte: 0";
-
-            // Timer zurücksetzen
             StoppeTimer();
             vergangeneZeit = TimeSpan.Zero;
             lblZeit.Text = "Zeit: 00:00";
-
-            // Neue Runde starten
             StarteNeueRunde();
             StarteTimer();
         }
@@ -273,37 +336,128 @@ namespace Strooptest
             gameBoard.AnzahlPictureBoxes = (int)nudAnzahlPictureBoxes.Value;
             punkte = 0;
             lblPunkte.Text = "Punkte: 0";
-
-            // Timer zurücksetzen
             StoppeTimer();
             vergangeneZeit = TimeSpan.Zero;
             lblZeit.Text = "Zeit: 00:00";
-
             StarteNeueRunde();
             StarteTimer();
         }
 
+        // Hilfsmethode: Farbe -> Name
+        private string FarbeZuName(Color farbe)
+        {
+            if (farbe == Color.Red) return "Rot";
+            if (farbe == Color.Blue) return "Blau";
+            if (farbe == Color.Yellow) return "Gelb";
+            if (farbe == Color.LimeGreen) return "Grün";
+            if (farbe == Color.Orange) return "Orange";
+            if (farbe == Color.Purple) return "Lila";
+            if (farbe == Color.HotPink) return "Pink";
+            if (farbe == Color.SaddleBrown) return "Braun";
+            if (farbe == Color.Cyan) return "Cyan";
+            return "";
+        }
+
+        // Hilfsmethode: Prüft, ob Wort und Farbe übereinstimmen (für Stroop-Effekt)
+        private bool EntsprichtWortFarbe(string wort, Color farbe)
+        {
+            if (wort == "Rot" && farbe == Color.Red) return true;
+            if (wort == "Blau" && farbe == Color.Blue) return true;
+            if (wort == "Gelb" && farbe == Color.Yellow) return true;
+            if (wort == "Grün" && farbe == Color.LimeGreen) return true;
+            if (wort == "Orange" && farbe == Color.Orange) return true;
+            if (wort == "Lila" && farbe == Color.Purple) return true;
+            if (wort == "Pink" && farbe == Color.HotPink) return true;
+            if (wort == "Braun" && farbe == Color.SaddleBrown) return true;
+            if (wort == "Cyan" && farbe == Color.Cyan) return true;
+            return false;
+        }
+
         private void StarteNeueRunde()
         {
-            // Neues Wort oben generieren
-            int wortIndex = random.Next(woerter.Count);
-            int farbenIndex = random.Next(farben.Count);
+            // 1. Grid generieren (alle Zellen erhalten Wort+Farbe)
+            gameBoard.GeneriereAlleLabelsNeu();
 
-            lblWort.Text = woerter[wortIndex];
-            lblWort.ForeColor = farben[farbenIndex];
+            // 2. Sichtbarkeit nach Schwierigkeit setzen
+            gameBoard.SetzeSichtbareLabelsNachSchwierigkeit(aktuelleSchwierigkeit);
 
-            // Hintergrundfarbe anpassen für bessere Lesbarkeit
-            lblWort.BackColor = (farben[farbenIndex] == Color.White ||
-                                farben[farbenIndex] == Color.Yellow ||
-                                farben[farbenIndex] == Color.HotPink)
+            // 3. Alle sichtbaren Labels sammeln
+            List<Label> sichtbareLabels = new List<Label>();
+            foreach (var pb in gamePanel.Controls.OfType<PictureBox>())
+            {
+                if (pb.Controls.Count > 0 && pb.Controls[0] is Label lbl && lbl.Visible)
+                {
+                    sichtbareLabels.Add(lbl);
+                }
+            }
+
+            // Fallback, falls keine sichtbaren Labels (sollte nicht passieren)
+            if (sichtbareLabels.Count == 0)
+            {
+                foreach (var pb in gamePanel.Controls.OfType<PictureBox>())
+                {
+                    if (pb.Controls.Count > 0 && pb.Controls[0] is Label lbl)
+                    {
+                        lbl.Visible = true;
+                        sichtbareLabels.Add(lbl);
+                        break;
+                    }
+                }
+            }
+
+            // 4. Eindeutige sichtbare Schriftfarben ermitteln
+            HashSet<Color> sichtbareFarbenSet = new HashSet<Color>();
+            foreach (Label lbl in sichtbareLabels)
+            {
+                sichtbareFarbenSet.Add(lbl.ForeColor);
+            }
+            List<Color> sichtbareFarben = sichtbareFarbenSet.ToList();
+
+            // 5. Zufällige Farbe aus den sichtbaren Schriftfarben wählen (gesuchte Farbe)
+            Color gesuchteFarbe = sichtbareFarben[random.Next(sichtbareFarben.Count)];
+
+            // 6. Den Namen der gesuchten Farbe ermitteln
+            string gesuchterFarbname = FarbeZuName(gesuchteFarbe);
+
+            // 7. Prüfen, ob dieser Name in einem sichtbaren Label als Text vorkommt
+            bool nameVorhanden = sichtbareLabels.Any(lbl => lbl.Text == gesuchterFarbname);
+
+            // 8. Wenn nicht vorhanden, ersetze ein zufälliges sichtbares Label
+            if (!nameVorhanden && sichtbareLabels.Count > 0)
+            {
+                // Wähle ein zufälliges sichtbares Label
+                Label zielLabel = sichtbareLabels[random.Next(sichtbareLabels.Count)];
+
+                // Wähle eine zufällige Farbe, die nicht die gesuchte ist und nicht mit dem neuen Wort übereinstimmt
+                Color neueFarbe;
+                do
+                {
+                    neueFarbe = farben[random.Next(farben.Count)];
+                } while (neueFarbe == gesuchteFarbe || EntsprichtWortFarbe(gesuchterFarbname, neueFarbe));
+
+                zielLabel.Text = gesuchterFarbname;
+                zielLabel.ForeColor = neueFarbe;
+            }
+
+            // 9. Oberes Wort zufällig wählen, aber nicht mit der gesuchten Farbe übereinstimmen
+            string oberesWort;
+            do
+            {
+                oberesWort = woerter[random.Next(woerter.Count)];
+            } while (EntsprichtWortFarbe(oberesWort, gesuchteFarbe));
+
+            lblWort.Text = oberesWort;
+            lblWort.ForeColor = gesuchteFarbe;
+
+            // Hintergrund anpassen (bei hellen Farben dunklerer Hintergrund)
+            lblWort.BackColor = (gesuchteFarbe == Color.White ||
+                                gesuchteFarbe == Color.Yellow ||
+                                gesuchteFarbe == Color.HotPink)
                                 ? Color.DarkGray
                                 : Color.LightYellow;
 
-            // Dem GameBoard mitteilen, welches Wort gesucht wird
-            gameBoard.SetzeGesuchtesWort(farben[farbenIndex]);
-
-            // Grid mit neuen Wörtern füllen
-            gameBoard.GeneriereAlleLabelsNeu();
+            // 10. Dem GameBoard mitteilen, welche Farbe gesucht wird
+            gameBoard.SetzeGesuchtesWort(gesuchteFarbe);
         }
 
         private void GameBoard_CorrectAnswerSelected(object sender, AnswerEventArgs e)
@@ -322,7 +476,6 @@ namespace Strooptest
             lblLetzteAntwort.Text = $"✗ Falsch! Gesucht war '{e.GesuchtesWort}', aber du hast '{e.GeklicktesWort}' geklickt";
             lblLetzteAntwort.ForeColor = Color.Red;
 
-            // Kurze Pause zur Visualisierung, aber Zeit läuft weiter
             System.Threading.Tasks.Task.Delay(500).ContinueWith(_ =>
             {
                 this.Invoke((MethodInvoker)delegate
@@ -332,7 +485,6 @@ namespace Strooptest
             });
         }
 
-        // Form schließen - Timer stoppen
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             StoppeTimer();
