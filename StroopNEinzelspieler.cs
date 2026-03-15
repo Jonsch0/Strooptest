@@ -134,21 +134,16 @@ namespace Strooptest
                 gesuchtesWort = "Cyan";
         }
 
+        // Hauptmethode zum Generieren der Labels – jetzt immer eindeutig (für 9 Felder)
         public void GeneriereAlleLabelsNeu()
         {
-            if (anzahlPictureBoxes <= woerter.Count)
-            {
-                GeneriereEindeutig();
-            }
-            else
-            {
-                GeneriereMitNachbarschaftsregel();
-            }
+            GeneriereEindeutig();
         }
 
+        // Jede Farbe und jedes Wort genau einmal (für 9 Zellen) + keine gleiche Farbe/Wort nebeneinander
         private void GeneriereEindeutig()
         {
-            int spalten = (int)Math.Ceiling(Math.Sqrt(anzahlPictureBoxes));
+            int spalten = (int)Math.Ceiling(Math.Sqrt(anzahlPictureBoxes)); // = 3 für 9 Felder
 
             List<string> gemischteWoerter = new List<string>();
             List<Color> gemischteFarben = new List<Color>();
@@ -162,6 +157,7 @@ namespace Strooptest
 
                 gueltig = true;
 
+                // Prüfen: In keiner Zelle darf Wort und Farbe übereinstimmen
                 for (int i = 0; i < anzahlPictureBoxes; i++)
                 {
                     if (UeberpruefeObWortFarbeEntspricht(gemischteWoerter[i], gemischteFarben[i]))
@@ -173,6 +169,7 @@ namespace Strooptest
 
                 if (!gueltig) continue;
 
+                // Nachbarschaft prüfen (gleiche Wörter oder Farben nebeneinander?)
                 for (int i = 0; i < anzahlPictureBoxes; i++)
                 {
                     int zeile = i / spalten;
@@ -194,6 +191,7 @@ namespace Strooptest
                 }
             }
 
+            // Labels setzen
             for (int i = 0; i < anzahlPictureBoxes; i++)
             {
                 PictureBox pb = pictureBoxes[i];
@@ -202,66 +200,6 @@ namespace Strooptest
                 {
                     lbl.Text = gemischteWoerter[i];
                     lbl.ForeColor = gemischteFarben[i];
-                }
-            }
-        }
-
-        private void GeneriereMitNachbarschaftsregel()
-        {
-            int spalten = (int)Math.Ceiling(Math.Sqrt(anzahlPictureBoxes));
-
-            for (int i = 0; i < pictureBoxes.Count; i++)
-            {
-                PictureBox pb = pictureBoxes[i];
-                if (pb.Controls.Count > 0 && pb.Controls[0] is Label lbl)
-                {
-                    int zeile = i / spalten;
-                    int spalte = i % spalten;
-                    var nachbarn = ErmittleNachbarn(i, zeile, spalte);
-
-                    HashSet<string> verboteneWoerter = new HashSet<string>();
-                    HashSet<Color> verboteneFarben = new HashSet<Color>();
-                    foreach (int nachbarIndex in nachbarn)
-                    {
-                        PictureBox nachbarPb = pictureBoxes[nachbarIndex];
-                        if (nachbarPb.Controls.Count > 0 && nachbarPb.Controls[0] is Label nachbarLbl)
-                        {
-                            verboteneWoerter.Add(nachbarLbl.Text);
-                            verboteneFarben.Add(nachbarLbl.ForeColor);
-                        }
-                    }
-
-                    string neuesWort = "";
-                    Color neueFarbe = Color.Empty;
-                    bool gefunden = false;
-                    int maxVersuche = 1000;
-                    int versuche = 0;
-
-                    while (!gefunden && versuche < maxVersuche)
-                    {
-                        neuesWort = woerter[rand.Next(woerter.Count)];
-                        neueFarbe = farben[rand.Next(farben.Count)];
-
-                        if (!verboteneWoerter.Contains(neuesWort) &&
-                            !verboteneFarben.Contains(neueFarbe) &&
-                            !UeberpruefeObWortFarbeEntspricht(neuesWort, neueFarbe))
-                        {
-                            gefunden = true;
-                        }
-                        versuche++;
-                    }
-
-                    if (!gefunden)
-                    {
-                        do
-                        {
-                            neuesWort = woerter[rand.Next(woerter.Count)];
-                            neueFarbe = farben[rand.Next(farben.Count)];
-                        } while (UeberpruefeObWortFarbeEntspricht(neuesWort, neueFarbe));
-                    }
-
-                    lbl.Text = neuesWort;
-                    lbl.ForeColor = neueFarbe;
                 }
             }
         }
@@ -365,13 +303,8 @@ namespace Strooptest
 
         public void SetzeSichtbareLabelsNachSchwierigkeit(string schwierigkeit)
         {
-            if (pictureBoxes.Count != 9)
-            {
-                foreach (var pb in pictureBoxes)
-                    if (pb.Controls.Count > 0 && pb.Controls[0] is Label lbl)
-                        lbl.Visible = true;
-                return;
-            }
+            // Wir gehen immer von 9 PictureBoxes aus (3x3-Raster)
+            if (pictureBoxes.Count != 9) return;
 
             for (int i = 0; i < pictureBoxes.Count; i++)
             {
@@ -382,10 +315,10 @@ namespace Strooptest
                     switch (schwierigkeit)
                     {
                         case "Leicht":
-                            sichtbar = (i == 3 || i == 4 || i == 5);
+                            sichtbar = (i == 3 || i == 4 || i == 5); // mittlere Reihe
                             break;
                         case "Mittel":
-                            sichtbar = (i <= 2 || i >= 6);
+                            sichtbar = (i <= 2 || i >= 6); // obere und untere Reihe
                             break;
                         case "Schwer":
                         default:

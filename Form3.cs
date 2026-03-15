@@ -6,13 +6,13 @@ using System.Windows.Forms;
 
 namespace Strooptest
 {
-    public partial class Form2 : Form
+    public partial class Form3 : Form
     {
         private StroopNEinzelspieler gameBoard;
         private Button btnZurueck;
         private Panel gamePanel;
         private Label lblWort;
-        private Label lblPunkte;
+        private Label lblLeben;
         private Label lblZeit;
         private Label lblLetzteAntwort;
 
@@ -30,7 +30,8 @@ namespace Strooptest
         };
 
         private Random random = new Random();
-        private int punkte = 0;
+        private int leben;
+        private int startLeben;
 
         private System.Windows.Forms.Timer spielTimer;
         private TimeSpan vergangeneZeit;
@@ -38,8 +39,10 @@ namespace Strooptest
 
         private string aktuelleSchwierigkeit = "Schwer";
 
-        public Form2()
+        public Form3(int startLeben)
         {
+            this.startLeben = startLeben;
+            leben = startLeben;
             InitializeComponent();
             InitializeTimer();
             InitializeGameComponents();
@@ -81,11 +84,11 @@ namespace Strooptest
             }
         }
 
-        private void Form2_Load(object sender, EventArgs e) { }
+        private void Form3_Load(object sender, EventArgs e) { }
 
         private void InitializeGameComponents()
         {
-            this.Text = "Stroop Test - Endlosmodus (Punkte)";
+            this.Text = "Stroop Test - Klassisch (Leben)";
             this.Size = new Size(650, 750);
             this.StartPosition = FormStartPosition.CenterScreen;
 
@@ -104,17 +107,17 @@ namespace Strooptest
             };
             this.Controls.Add(btnZurueck);
 
-            // Punkte-Anzeige
-            lblPunkte = new Label
+            // Leben-Anzeige
+            lblLeben = new Label
             {
-                Text = "Punkte: 0",
+                Text = $"Leben: {leben}",
                 Location = new Point(500, 20),
                 Size = new Size(120, 30),
                 Font = new Font("Arial", 14, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleRight,
-                ForeColor = Color.DarkGreen
+                ForeColor = Color.DarkRed
             };
-            this.Controls.Add(lblPunkte);
+            this.Controls.Add(lblLeben);
 
             // Zeit-Anzeige
             lblZeit = new Label
@@ -255,8 +258,8 @@ namespace Strooptest
 
         private void BtnReset_Click(object sender, EventArgs e)
         {
-            punkte = 0;
-            lblPunkte.Text = "Punkte: 0";
+            leben = startLeben;
+            lblLeben.Text = $"Leben: {leben}";
             StoppeTimer();
             vergangeneZeit = TimeSpan.Zero;
             lblZeit.Text = "Zeit: 00:00";
@@ -264,7 +267,6 @@ namespace Strooptest
             StarteTimer();
         }
 
-        // Hilfsmethode: Farbe -> Name
         private string FarbeZuName(Color farbe)
         {
             if (farbe == Color.Red) return "Rot";
@@ -279,7 +281,6 @@ namespace Strooptest
             return "";
         }
 
-        // Hilfsmethode: Prüft, ob Wort und Farbe übereinstimmen
         private bool EntsprichtWortFarbe(string wort, Color farbe)
         {
             if (wort == "Rot" && farbe == Color.Red) return true;
@@ -381,10 +382,7 @@ namespace Strooptest
 
         private void GameBoard_CorrectAnswerSelected(object sender, AnswerEventArgs e)
         {
-            punkte++;
-            lblPunkte.Text = $"Punkte: {punkte}";
-
-            lblLetzteAntwort.Text = $"✓ Richtig! Das Wort '{e.GeklicktesWort}' war gesucht (+1 Punkt)";
+            lblLetzteAntwort.Text = $"✓ Richtig! Das Wort '{e.GeklicktesWort}' war gesucht";
             lblLetzteAntwort.ForeColor = Color.Green;
 
             StarteNeueRunde();
@@ -392,8 +390,18 @@ namespace Strooptest
 
         private void GameBoard_WrongAnswerSelected(object sender, AnswerEventArgs e)
         {
+            leben--;
+            lblLeben.Text = $"Leben: {leben}";
             lblLetzteAntwort.Text = $"✗ Falsch! Gesucht war '{e.GesuchtesWort}', du hast '{e.GeklicktesWort}' geklickt";
             lblLetzteAntwort.ForeColor = Color.Red;
+
+            if (leben <= 0)
+            {
+                StoppeTimer();
+                MessageBox.Show("Keine Leben mehr übrig! Du hast verloren.", "Game Over", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                this.Close();
+                return;
+            }
 
             System.Threading.Tasks.Task.Delay(500).ContinueWith(_ =>
             {
