@@ -17,6 +17,11 @@ namespace Strooptest
         private Label lblPunkte;
         private Label lblZeit;
         private Label lblLetzteAntwort;
+      
+        Sockets sockets; //!!!
+
+        int meinLeben = 15;
+        int gegnerLeben = 15; //!!!
 
         private List<string> woerter = new List<string> { "Rot", "Blau", "Gelb", "Grün", "Orange", "Lila", "Pink", "Braun", "Cyan" };
         private List<Color> farben = new List<Color> {
@@ -489,6 +494,33 @@ namespace Strooptest
         {
             StoppeTimer();
             base.OnFormClosing(e);
+        }
+
+        /*public Form2(Sockets socketsRef) //!!!
+        {
+            InitializeComponent();
+
+            sockets = socketsRef;
+
+            sockets.OnLebenReceived += GegnerLebenEmpfangen;
+
+            UpdateUI();
+        }*/
+
+        void UpdateUI()
+        {
+            myLifeLabel.Text = "Mein Leben: " + meinLeben;
+            enemyLifeLabel.Text = "Gegner Leben: " + gegnerLeben;
+        }
+
+        void GegnerLebenEmpfangen(int leben)
+        {
+            gegnerLeben = leben;
+
+            Invoke((MethodInvoker)delegate
+            {
+                UpdateUI();
+            });
         }
     }
 }

@@ -6,6 +6,7 @@ namespace Strooptest
 {
     public partial class Form1 : Form
     {
+        Sockets sockets = new Sockets();
         public Form1()
         {
             InitializeComponent();
@@ -50,10 +51,52 @@ namespace Strooptest
 
         private void BtnZuForm2_Click(object sender, EventArgs e)
         {
-            Form2 form2 = new Form2();
+            Form2 form2 = new Form2(sockets); //!!!
             form2.Show();
             this.Hide();
             form2.FormClosed += (s, args) => this.Show();
+        }
+
+        private void hostBtn_Click(object sender, EventArgs e) //hostBtn, statusLbl, beitretenBtn
+        {
+            string code = sockets.StarteHost();
+
+            statusLbl.Text = "Host Code: " + code;
+
+            Thread thread = new Thread(() =>
+            {
+                sockets.WarteAufSpieler(() =>
+                {
+                    Invoke((MethodInvoker)delegate
+                    {
+                        statusLbl.Text = "Spieler verbunden, Spiel startet";
+                    });
+                });
+            });
+
+            thread.Start();
+        }
+
+        private void beitretenBtn_Click(object sender, EventArgs e)
+        {
+            string code = codeBox.Text;
+
+            statusLbl.Text = "Verbinde...";
+
+            Thread thread = new Thread(() =>
+            {
+                bool success = sockets.Beitreten(code);
+
+                Invoke((MethodInvoker)delegate
+                {
+                    if (success)
+                        statusLbl.Text = "Spiel startet";
+                    else
+                        statusLbl.Text = "Verbindung fehlgeschlagen";
+                });
+            });
+
+            thread.Start();
         }
 
         private void Form1_Load(object sender, EventArgs e) { }
