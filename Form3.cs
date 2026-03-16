@@ -15,6 +15,8 @@ namespace Strooptest
         private Label lblLeben;
         private Label lblZeit;
         private Label lblLetzteAntwort;
+        private Label lblSchwierigkeit;
+        private Label lblRundenZaehler;
 
         private List<string> woerter = new List<string> { "Rot", "Blau", "Gelb", "Grün", "Orange", "Lila", "Pink", "Braun", "Cyan" };
         private List<Color> farben = new List<Color> {
@@ -32,12 +34,13 @@ namespace Strooptest
         private Random random = new Random();
         private int leben;
         private int startLeben;
+        private int rundenZaehler = 0;
 
         private System.Windows.Forms.Timer spielTimer;
         private TimeSpan vergangeneZeit;
         private bool timerLaeuft = false;
 
-        private string aktuelleSchwierigkeit = "Schwer";
+        private string aktuelleSchwierigkeit;
 
         public Form3(int startLeben)
         {
@@ -89,10 +92,9 @@ namespace Strooptest
         private void InitializeGameComponents()
         {
             this.Text = "Stroop Test - Klassisch (Leben)";
-            this.Size = new Size(650, 750);
+            this.Size = new Size(650, 720);
             this.StartPosition = FormStartPosition.CenterScreen;
 
-            // Zurück-Button
             btnZurueck = new Button
             {
                 Text = "← Zurück zum Hauptmenü",
@@ -107,7 +109,6 @@ namespace Strooptest
             };
             this.Controls.Add(btnZurueck);
 
-            // Leben-Anzeige
             lblLeben = new Label
             {
                 Text = $"Leben: {leben}",
@@ -119,7 +120,6 @@ namespace Strooptest
             };
             this.Controls.Add(lblLeben);
 
-            // Zeit-Anzeige
             lblZeit = new Label
             {
                 Text = "Zeit: 00:00",
@@ -131,7 +131,6 @@ namespace Strooptest
             };
             this.Controls.Add(lblZeit);
 
-            // Letzte Antwort-Anzeige
             lblLetzteAntwort = new Label
             {
                 Text = "",
@@ -143,11 +142,30 @@ namespace Strooptest
             };
             this.Controls.Add(lblLetzteAntwort);
 
-            // Wort-Label oben
+            lblSchwierigkeit = new Label
+            {
+                Text = "Schwierigkeit: Leicht",
+                Location = new Point(20, 85),
+                Size = new Size(200, 20),
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                ForeColor = Color.DarkBlue
+            };
+            this.Controls.Add(lblSchwierigkeit);
+
+            lblRundenZaehler = new Label
+            {
+                Text = "Runde: 0",
+                Location = new Point(250, 85),
+                Size = new Size(100, 20),
+                Font = new Font("Arial", 10, FontStyle.Regular),
+                ForeColor = Color.Black
+            };
+            this.Controls.Add(lblRundenZaehler);
+
             lblWort = new Label
             {
                 Text = "Rot",
-                Location = new Point(20, 90),
+                Location = new Point(20, 110),
                 Size = new Size(550, 60),
                 Font = new Font("Arial", 28, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -156,102 +174,37 @@ namespace Strooptest
             };
             this.Controls.Add(lblWort);
 
-            // Game Panel
             gamePanel = new Panel
             {
-                Location = new Point(20, 160),
-                Size = new Size(550, 520),
+                Location = new Point(20, 180),
+                Size = new Size(550, 460),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = Color.White
             };
             this.Controls.Add(gamePanel);
 
-            // GameBoard initialisieren (immer 9 PictureBoxes)
             gameBoard = new StroopNEinzelspieler(gamePanel);
             gameBoard.AnzahlPictureBoxes = 9;
             gameBoard.CorrectAnswerSelected += GameBoard_CorrectAnswerSelected;
             gameBoard.WrongAnswerSelected += GameBoard_WrongAnswerSelected;
 
-            // Reset Button
             Button btnReset = new Button
             {
                 Text = "Neustart",
-                Location = new Point(20, 690),
+                Location = new Point(20, 650),
                 Size = new Size(100, 30),
                 BackColor = Color.LightYellow
             };
             btnReset.Click += BtnReset_Click;
             this.Controls.Add(btnReset);
 
-            // ---- Schwierigkeitsauswahl ----
-            GroupBox grpSchwierigkeit = new GroupBox
-            {
-                Text = "Schwierigkeit",
-                Location = new Point(140, 680),
-                Size = new Size(380, 60),
-                BackColor = Color.Transparent
-            };
-
-            RadioButton rbLeicht = new RadioButton
-            {
-                Text = "Leicht (3 Labels)",
-                Location = new Point(20, 25),
-                Size = new Size(120, 25),
-                Checked = false
-            };
-            rbLeicht.CheckedChanged += (s, e) =>
-            {
-                if (rbLeicht.Checked)
-                {
-                    aktuelleSchwierigkeit = "Leicht";
-                    StarteNeueRunde();
-                }
-            };
-
-            RadioButton rbMittel = new RadioButton
-            {
-                Text = "Mittel (6 Labels)",
-                Location = new Point(150, 25),
-                Size = new Size(120, 25),
-                Checked = false
-            };
-            rbMittel.CheckedChanged += (s, e) =>
-            {
-                if (rbMittel.Checked)
-                {
-                    aktuelleSchwierigkeit = "Mittel";
-                    StarteNeueRunde();
-                }
-            };
-
-            RadioButton rbSchwer = new RadioButton
-            {
-                Text = "Schwer (9 Labels)",
-                Location = new Point(280, 25),
-                Size = new Size(120, 25),
-                Checked = true
-            };
-            rbSchwer.CheckedChanged += (s, e) =>
-            {
-                if (rbSchwer.Checked)
-                {
-                    aktuelleSchwierigkeit = "Schwer";
-                    StarteNeueRunde();
-                }
-            };
-
-            grpSchwierigkeit.Controls.AddRange(new Control[] { rbLeicht, rbMittel, rbSchwer });
-            this.Controls.Add(grpSchwierigkeit);
-
-            // --- Automatische Anpassung an Bildschirm ---
             this.AutoScroll = true;
             Rectangle screen = Screen.PrimaryScreen.WorkingArea;
             int desiredHeight = (int)(screen.Height * 0.9);
-            this.Height = Math.Min(750, desiredHeight);
+            this.Height = Math.Min(720, desiredHeight);
             this.Width = 650;
             this.StartPosition = FormStartPosition.CenterScreen;
 
-            // Erste Runde starten
             StarteNeueRunde();
             StarteTimer();
         }
@@ -259,7 +212,9 @@ namespace Strooptest
         private void BtnReset_Click(object sender, EventArgs e)
         {
             leben = startLeben;
+            rundenZaehler = 0;
             lblLeben.Text = $"Leben: {leben}";
+            lblRundenZaehler.Text = "Runde: 0";
             StoppeTimer();
             vergangeneZeit = TimeSpan.Zero;
             lblZeit.Text = "Zeit: 00:00";
@@ -297,6 +252,12 @@ namespace Strooptest
 
         private void StarteNeueRunde()
         {
+            rundenZaehler++;
+            lblRundenZaehler.Text = $"Runde: {rundenZaehler}";
+
+            aktuelleSchwierigkeit = Schwierigkeit.ErmittleSchwierigkeit(rundenZaehler);
+            lblSchwierigkeit.Text = $"Schwierigkeit: {aktuelleSchwierigkeit}";
+
             int maxVersuche = 200;
             int versuch = 0;
             bool gefunden = false;
