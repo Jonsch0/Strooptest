@@ -13,10 +13,16 @@ namespace Strooptest
         private Panel gamePanel;
         private Label lblWort;
         private Label lblLeben;
+        private Label lblMeinLeben; //!!!
+        private Label lblGegnerLeben; //!!!
         private Label lblZeit;
         private Label lblLetzteAntwort;
         private Label lblSchwierigkeit;
         private Label lblRundenZaehler;
+        Sockets sockets; //!!!
+
+        int meinLeben = 15;
+        int gegnerLeben = 15; //!!!
 
         private List<string> woerter = new List<string> { "Rot", "Blau", "Gelb", "Grün", "Orange", "Lila", "Pink", "Braun", "Cyan" };
         private List<Color> farben = new List<Color> {
@@ -119,6 +125,28 @@ namespace Strooptest
                 ForeColor = Color.DarkRed
             };
             this.Controls.Add(lblLeben);
+
+            lblMeinLeben = new Label //!!!
+            {
+                Text = $"Leben: {meinLeben}",
+                Location = new Point(500, 60),
+                Size = new Size(120, 30),
+                Font = new Font("Arial", 14, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleRight,
+                ForeColor = Color.DarkRed
+            };
+            this.Controls.Add(lblMeinLeben);
+
+            lblGegnerLeben = new Label //!!!
+            {
+                Text = $"Leben: {gegnerLeben}",
+                Location = new Point(500, 100),
+                Size = new Size(120, 30),
+                Font = new Font("Arial", 14, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleRight,
+                ForeColor = Color.DarkRed
+            };
+            this.Controls.Add(lblGegnerLeben);
 
             lblZeit = new Label
             {
@@ -372,6 +400,34 @@ namespace Strooptest
                 });
             });
         }
+  
+        public Form3(Sockets socketsRef) //!!! SOCKEEEETSSSS
+        {
+            InitializeComponent();
+
+            sockets = socketsRef;
+
+            sockets.OnLebenReceived += GegnerLebenEmpfangen;
+
+            UpdateUI();
+        }
+
+      void UpdateUI()
+        {
+            lblMeinLeben.Text = "Mein Leben: " + meinLeben;
+            lblGegnerLeben.Text = "Gegner Leben: " + gegnerLeben;
+        }
+
+        void GegnerLebenEmpfangen(int leben)
+        {
+            gegnerLeben = leben;
+
+            Invoke((MethodInvoker)delegate
+            {
+                UpdateUI();
+            });
+        }
+
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {

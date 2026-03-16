@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.Beendenbtn = new System.Windows.Forms.Button();
+            this.tbCode2 = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // Beendenbtn
@@ -41,23 +42,33 @@
             this.Beendenbtn.UseVisualStyleBackColor = true;
             this.Beendenbtn.Click += new System.EventHandler(this.Beendenbtn_Click);
             // 
+            // tbCode2
+            // 
+            this.tbCode2.Location = new System.Drawing.Point(566, 190);
+            this.tbCode2.Name = "tbCode2";
+            this.tbCode2.Size = new System.Drawing.Size(100, 26);
+            this.tbCode2.TabIndex = 1;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(935, 561);
+            this.Controls.Add(this.tbCode2);
             this.Controls.Add(this.Beendenbtn);
             this.Name = "Form1";
             this.Text = "Form1";
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
         #endregion
 
         private System.Windows.Forms.Button Beendenbtn;
+        private System.Windows.Forms.TextBox tbCode2;
     }
 }
 

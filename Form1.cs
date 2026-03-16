@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Drawing;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Strooptest
@@ -7,7 +10,9 @@ namespace Strooptest
     public partial class Form1 : Form
     {
         private NumericUpDown nudLeben;
-
+        public Label lblStatus;
+        public TextBox tbCode;
+        Sockets sockets = new Sockets();
         public Form1()
         {
             InitializeComponent();
@@ -76,6 +81,48 @@ namespace Strooptest
             btnKlassisch.Click += BtnKlassisch_Click;
             this.Controls.Add(btnKlassisch);
 
+            Button btnBeitreten = new Button //!!!
+            {
+                Text = "Spiel beitreten",
+                Location = new Point(500, 170),
+                Size = new Size(180, 40),
+                Font = new Font("Arial", 12, FontStyle.Regular),
+                BackColor = Color.LightBlue,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnBeitreten.Click += btnBeitreten_Click;
+            this.Controls.Add(btnBeitreten);
+
+            lblStatus = new Label
+            {
+                Text = "[Verbindungsstatus]",
+                Location = new Point(500, 120),
+                Size = new Size(120, 20)
+            };
+            this.Controls.Add(lblStatus); 
+
+            Button btnHosten = new Button
+            {
+                Text = "Spiel hosten",
+                Location = new Point(500, 70),
+                Size = new Size(180, 40),
+                Font = new Font("Arial", 12, FontStyle.Regular),
+                BackColor = Color.LightGreen,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnHosten.Click += btnHosten_Click;
+            this.Controls.Add(btnHosten);
+
+            tbCode = new TextBox
+            {
+                Text = "[Verbindungscode]",
+                Location = new Point(500, 170),
+                Size = new Size(120, 20),
+                ForeColor = Color.Green,
+            }; 
+
+            this.Controls.Add(tbCode);
+
             // Beenden Button
             Beendenbtn.Text = "Beenden";
             Beendenbtn.Location = new Point(100, 240);
@@ -102,6 +149,47 @@ namespace Strooptest
             form3.FormClosed += (s, args) => this.Show();
         }
 
+        public void btnHosten_Click(object sender, EventArgs e) //hostBtn, statusLbl, beitretenBtn
+        {
+            string code = sockets.StarteHost();
+
+            lblStatus.Text = "Host Code: " + code;
+
+            Thread thread = new Thread(() =>
+            {
+                sockets.WarteAufSpieler(() =>
+                {
+                    Invoke((MethodInvoker)delegate
+                    {
+                        lblStatus.Text = "Spieler verbunden, Spiel startet";
+                    });
+                });
+            });
+
+            thread.Start();
+        }
+
+        private void btnBeitreten_Click(object sender, EventArgs e)
+        {
+            string code = tbCode2.Text;
+
+            lblStatus.Text = "Verbinde...";
+
+            Thread thread = new Thread(() =>
+            {
+                bool success = sockets.Beitreten(code);
+
+                Invoke((MethodInvoker)delegate
+                {
+                    if (success)
+                        lblStatus.Text = "Spiel startet";
+                    else
+                        lblStatus.Text = "Verbindung fehlgeschlagen";
+                });
+            });
+
+            thread.Start();
+        }
         private void Form1_Load(object sender, EventArgs e) { }
 
         private void Beendenbtn_Click(object sender, EventArgs e)
